@@ -3,17 +3,17 @@ import sys
 from distutils.core import setup
 
 sys.path.insert(0, 'src')
-from eflag import package_version
+import eflag
 
 setup(
     name = "eflag",
-    version = package_version,
     package_dir = {'': 'src'},
     packages = ['eflag'],
     scripts = ["eflag"],
-    description = "Python script to ease editing of portage package file.",
-    author = "Axujen",
-    author_email = "Axujen <axujen@gmail.org>",
+	description = eflag.description,
+    version = eflag.package_version,
+    author = eflag.author,
+    author_email = eflag.author_email,
     url = "https://github.com/axujen/eflag",
     keywords = ["portage", "package"],
 	classifiers = [
