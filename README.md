@@ -14,8 +14,8 @@ Goals:
 
 Thanks:
 =======
-Thanks to [Pyntony](github.com/Pyntony) for the original tool
-[emod](github.com/Pyntony/emod)
+Thanks to [Pyntony](http://github.com/Pyntony) for the original tool
+[emod](http://github.com/Pyntony/emod)
 
 *Note: eflag is still in development, don't use directly on your package files
 unless if you have a backup
