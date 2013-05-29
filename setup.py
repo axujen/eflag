@@ -17,11 +17,17 @@ setup(
     url = "https://github.com/axujen/eflag",
     keywords = ["portage", "package"],
 	classifiers = [
-                'Development Status :: 4 - Beta',
+                'Development Status :: 3 - Alpha',
                 'Environment :: Console',
                 'Intended Audience :: System Administrators',
+				'Intended Audience :: End Users/Desktop',
                 'Programming Language :: Python',
+				'Programming Language :: Python :: 3',
+				'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+				'Operating System :: POSIX :: Linux',
                 'Topic :: System :: Installation/Setup'
+				'Topic :: System :: Systems Administration',
+				'Topic :: Utilities',
                 ],
     long_description = """\
 eflag
