@@ -62,40 +62,49 @@ class Package(object):
 		pkg_file = self.path
 		if not os.path.exists(pkg_file):
 			raise IOError('Cannot find %s' % pkg_file)
+		rules = {}
 
 		# the rules are split into a list in the form [atom, flags]
 		if self.style == 'file':
 			with open(pkg_file, 'r', encoding='utf-8') as f:
-				rules = []
 				# filter empty lines and comments
 				for line in f.readlines():
 					if not line.isspace() and not line.startswith("#"):
-						rule = line.rstrip('\n').split(None, 1)
-						if len(rule) < 2: rule.append('')
-						rules.append(rule)
+						try:
+							atom, flags = line.rstrip('\n').split(None, 1)
+							flags=flags.split(None)
+						except ValueError:
+							atom, flags = line.rstrip('\n'), []
+						rules[atom.strip()]=list(set(flags))
 
 		# directories go by another layout with seperate files for categories
 		# with each category file containing atoms for ebuilds that
 		# fall into that category
 		elif self.style == 'directory':
-			rules = []
 			for category in os.listdir(pkg_file):
 				with open(os.path.join(pkg_file, category), 'r', encoding='utf-8') as f:
 					for line in f.readlines():
 						if not line.isspace() and not line.startswith("#"):
-							rule = line.rstrip('\n').split(None, 1)
-							if len(rule) < 2: rule.append('')
-							rules.append(rule)
+							try:
+								atom, flags = line.rstrip('\n').split(None, 1)
+								flags=flags.split(None)
+							except ValueError:
+								atom, flags = line.rstrip('\n'), []
+							rules[atom.strip()]=list(set(flags))
 
-		self.rules = sorted(rules)
+		self.rules = rules
 		return self.rules
 
 	def save_rules(self):
 		"""Save the `rules` to `pkg_file`."""
 
-		# modify the rules for a more writable format
-		rules = [' '.join(atom) + '\n' for atom in self.rules]
 		pkg_file = self.path
+		# modify the rules for a more writable format
+		rules = []
+		for atom in self.rules:
+			rule = ' '.join((atom, ' '.join((self.rules[atom])))) + '\n'
+			rules.append(rule)
+		rules.sort()
 
 		# Save according to the directory format if working with directories.
 		if self.style == 'directory':
@@ -127,7 +136,7 @@ class Package(object):
 	def convert(self):
 		"""Convert the package style."""
 
-		if not self.rules:
+		if self.rules == None:
 			self.read_rules()
 
 		# Backup the old file.
@@ -149,13 +158,52 @@ class Package(object):
 			self.style = 'file'
 		self.save_rules()
 
-	def add_atom(self, atom):
+	def modify_atom(self, atom, flags):
 		"""Add or modify an atom."""
 
-		if not self.rules:
+		if self.rules == None:
 			self.read_rules()
 
-		pass
+		if atom in self.rules:
+			old_atom = ' '.join((atom, ' '.join((self.rules[atom]))))
+			for flag in flags:
+				if flag.startswith("%"):
+					matches = [f for f in self.rules[atom] if flag[1:] in (f, f[1:])]
+					if matches:
+						for match in matches:
+							self.rules[atom].remove(match)
+				elif flag in self.rules[atom]:
+					print('Warning flag %s already exists!' % flag)
+				else:
+					self.rules[atom].append(flag)
+			print('Modified %s:' % atom)
+			diff(old_atom, ' '.join((atom, ' '.join((self.rules[atom])))))
+		else:
+			self.rules[atom]=flags
+			print('Added "%s" to the rules!' % ' '.join((atom, ' '.join((self.rules[atom])))))
+
+		self.save_rules()
+
+	def delete_rule(self, atom):
+		"""Delete the rule associated with the `atom`"""
+
+		if self.rules == None:
+			self.read_rules()
+
+		if atom in self.rules:
+			self.rules.pop(atom)
+			print('Removed %s from the rules!' % atom)
+		else:
+			print('No match for %s found!' % atom)
+
+		self.save_rules()
+
+	def print_rules(self):
+		if self.rules == None:
+			self.read_rules()
+
+		for atom in self.rules:
+			print(' '.join((atom, ' '.join((self.rules[atom])))))
 
 def diff(string1, string2):
 	"""Print a colored diff of 2 rules."""
@@ -175,22 +223,35 @@ def diff(string1, string2):
 	sys.stdout.write("\n")
 
 def main():
-	arguments = ArgumentParser(description="Ease your /etc/portage/package.* edition.")
-	arguments.add_argument('-s', '--show', default=False, action='store_true')
-	arguments.add_argument('--save', default=False, action='store_true')
-	arguments.add_argument('-c', '--convert', default=False, action='store_true')
+	arguments = ArgumentParser(description="Ease your /etc/portage/package.* "\
+			"file edition.")
+	arguments.add_argument('atom', type=str, nargs='?', default=None,
+			help="atom to be added/modified")
+	arguments.add_argument('flags', type=str, nargs=REMAINDER, default=[],
+			help="flags to be enabled for the atom, flags starting with %% "\
+					"will be deleted")
+	arguments.add_argument('-d', '--delete', action='store_true', default=False,
+			help='delete the sepecified atom from the rules')
+	arguments.add_argument('-s', '--show', default=False, action='store_true',
+			help="show the rules in the selected package file")
+	arguments.add_argument('-c', '--convert', default=False, action='store_true',
+			help="convert the current package file from file style to folder "\
+					"style and vice-versa")
 
-	args = vars(arguments.parse_args())
+	args = arguments.parse_args()
 	pkg='~/Code/eflag/package.use'
 	type='use'
 	package=Package(pkg, type)
-	package.read_rules()
 
-	if args['show']:
-		print(package.rules)
-	if args['save']:
-		package.save_rules()
-	if args['convert']:
+	if args.show:
+		package.print_rules()
+	if args.convert:
 		package.convert()
+
+	if args.atom:
+		if args.delete:
+			package.delete_rule(args.atom)
+		else:
+			package.modify_atom(args.atom, args.flags)
 
 # vim: ft=python:tabstop=4:softtabstop=4:shiftwidth=4:noexpandtab
