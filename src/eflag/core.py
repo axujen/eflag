@@ -90,10 +90,7 @@ class Package(object):
 		"""Save the rules to the package file."""
 
 		# modify the rules for a more writable format
-		rules = []
-		for atom in self.rules:
-			rule = self._atom_rule(atom) + '\n'
-			rules.append(rule)
+		rules = [ self._atom_rule(rule) + '\n' for rule in self.rules ]
 		rules.sort()
 
 		# Save according to the directory format if working with directories.
