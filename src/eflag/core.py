@@ -21,30 +21,18 @@ from difflib import Differ
 from argparse import ArgumentParser, REMAINDER
 
 __version__ = '0.1.0'
-
-class cituple(tuple):
-	"""Case insensitive typle."""
-	def __init__(self, set):
-		self.set = set
-
-	def __contains__(self, item):
-		return item.lower() in (s.lower() for s in self.set)
+supported_types=('accept_keywords', 'env', 'keywords', 'license', 'mask',
+'properties', 'unmask', 'use')
 
 class Package(object):
 	"""portage package file."""
-	pkg_types = cituple(('accept_keywords', 'env', 'keywords', 'license',
-		'mask', 'properties', 'unmask', 'use'))
-
-	def __init__(self, path, type):
-		self.path = os.path.abspath(os.path.expanduser(path))
+	def __init__(self, type):
 		self.type = type
+		self.path = '.'.join(('/etc/portage/package', self.type))
 
-		if not type in self.pkg_types:
-			raise TypeError('Unsupported package type: %s' % type)
-
-		# Raise error if the file does not exist
+		# for the sake of simplicity create the file if it does not exist
 		if not os.path.exists(self.path):
-			raise OSError('File %s not found!' % self.path)
+			open(self.path, 'a', encoding='utf-8').close()
 
 		# Detect package style
 		if os.path.isdir(self.path):
@@ -52,7 +40,8 @@ class Package(object):
 		elif os.path.isfile(self.path):
 			self.style = 'file'
 		else:
-			raise TypeError('Unrecognized file type for %s' % path)
+			# It can only be a directory or file (symlinks should pass)
+			raise TypeError('"%s" is not a file or directory!' % self.path)
 
 		self.rules = None # None means that we have not read the rules yet.
 
@@ -60,8 +49,6 @@ class Package(object):
 		"""Read the rules from package file."""
 
 		pkg_file = self.path
-		if not os.path.exists(pkg_file):
-			raise IOError('Cannot find %s' % pkg_file)
 		rules = {}
 
 		# the rules are split into a list in the form [atom, flags]
@@ -96,21 +83,17 @@ class Package(object):
 		return self.rules
 
 	def save_rules(self):
-		"""Save the `rules` to `pkg_file`."""
+		"""Save the rules to the package file."""
 
-		pkg_file = self.path
 		# modify the rules for a more writable format
 		rules = []
 		for atom in self.rules:
-			rule = ' '.join((atom, ' '.join((self.rules[atom])))) + '\n'
+			rule = self._atom_rule(atom) + '\n'
 			rules.append(rule)
 		rules.sort()
 
 		# Save according to the directory format if working with directories.
 		if self.style == 'directory':
-			if not os.path.exists(pkg_file):
-				os.mkdir(pkg_file)
-
 			# seperate categories and ebuilds, then build a dictionary in the
 			# {category:"category/ebuild\ncategory/ebuild2\n"} format for writing
 			categories = {}
@@ -124,13 +107,13 @@ class Package(object):
 				   categories[base_category] = rule
 
 			for category in categories:
-				category_file = os.path.join(pkg_file, category)
+				category_file = os.path.join(self.path, category)
 				with open(category_file, 'w', encoding='utf-8') as f:
 					f.write(categories[category])
 
 		# Save normaly if working with a file.
 		elif self.style == 'file':
-			with open(pkg_file, 'w', encoding='utf-8') as f:
+			with open(self.path, 'w', encoding='utf-8') as f:
 				f.write(''.join(rules))
 
 	def convert(self):
@@ -151,11 +134,14 @@ class Package(object):
 
 		if self.style == 'file':
 			print('Going from file to directory style.')
+			os.mkdir(self.path)
 			self.style = 'directory'
 
 		elif self.style == 'directory':
 			print('Going from directory to file style.')
+			open(self.path, 'a', encoding='utf-8').close()
 			self.style = 'file'
+
 		self.save_rules()
 
 	def modify_atom(self, atom, flags):
@@ -164,8 +150,21 @@ class Package(object):
 		if self.rules == None:
 			self.read_rules()
 
+		if not flags:
+			# mask and unmask do not require flags
+			if self.type in ('mask', 'unmask'):
+				self.rules[atom]=[]
+				print('"%s" has been %sed.' % (atom, self.type))
+				self.save_rules()
+			# If no modifications are made then just print the rule.
+			elif atom in self.rules:
+				print(self._atom_rule(atom))
+			else:
+				print('No rule found for "%s" in "%s"!' % (atom, self.path))
+			return
+
 		if atom in self.rules:
-			old_atom = ' '.join((atom, ' '.join((self.rules[atom]))))
+			old_atom = self._atom_rule(atom)
 			for flag in flags:
 				if flag.startswith("%"):
 					matches = [f for f in self.rules[atom] if flag[1:] in (f, f[1:])]
@@ -173,14 +172,14 @@ class Package(object):
 						for match in matches:
 							self.rules[atom].remove(match)
 				elif flag in self.rules[atom]:
-					print('Warning flag %s already exists!' % flag)
+					print('Warning flag "%s" already exists!' % flag)
 				else:
 					self.rules[atom].append(flag)
-			print('Modified %s:' % atom)
-			diff(old_atom, ' '.join((atom, ' '.join((self.rules[atom])))))
+			print('Modified "%s":' % atom)
+			diff(old_atom, self._atom_rule(atom))
 		else:
 			self.rules[atom]=flags
-			print('Added "%s" to the rules!' % ' '.join((atom, ' '.join((self.rules[atom])))))
+			print('Added "%s" to "%s"!' % (self._atom_rule(atom), self.path))
 
 		self.save_rules()
 
@@ -192,9 +191,9 @@ class Package(object):
 
 		if atom in self.rules:
 			self.rules.pop(atom)
-			print('Removed %s from the rules!' % atom)
+			print('Removed "%s" from "%s"!' % (atom, self.path))
 		else:
-			print('No match for %s found!' % atom)
+			print('No match for "%s" found in "%s"!' % (atom, self.path))
 
 		self.save_rules()
 
@@ -203,7 +202,14 @@ class Package(object):
 			self.read_rules()
 
 		for atom in self.rules:
-			print(' '.join((atom, ' '.join((self.rules[atom])))))
+			print(self._atom_rule(atom))
+
+	def _atom_rule(self, atom):
+		"""Join the rule for the specified atom into one line."""
+		if atom in self.rules:
+			return ' '.join((atom, ' '.join((self.rules[atom]))))
+		else:
+			return None
 
 def diff(string1, string2):
 	"""Print a colored diff of 2 rules."""
@@ -225,23 +231,24 @@ def diff(string1, string2):
 def main():
 	arguments = ArgumentParser(description="Ease your /etc/portage/package.* "\
 			"file edition.")
+	arguments.add_argument('-v', '--version', action='version', version=__version__)
 	arguments.add_argument('atom', type=str, nargs='?', default=None,
 			help="atom to be added/modified")
 	arguments.add_argument('flags', type=str, nargs=REMAINDER, default=[],
 			help="flags to be enabled for the atom, flags starting with %% "\
 					"will be deleted")
-	arguments.add_argument('-d', '--delete', action='store_true', default=False,
+	arguments.add_argument('-t', type=str, default='use', dest='type',
+			help='package file type', choices=(supported_types))
+	arguments.add_argument('-d', action='store_true', default=False, dest='delete',
 			help='delete the sepecified atom from the rules')
-	arguments.add_argument('-s', '--show', default=False, action='store_true',
-			help="show the rules in the selected package file")
-	arguments.add_argument('-c', '--convert', default=False, action='store_true',
+	arguments.add_argument('-s', default=False, action='store_true', dest='show',
+			help="show the rules for this type")
+	arguments.add_argument('-c', default=False, action='store_true', dest='convert',
 			help="convert the current package file from file style to folder "\
 					"style and vice-versa")
 
 	args = arguments.parse_args()
-	pkg='~/Code/eflag/package.use'
-	type='use'
-	package=Package(pkg, type)
+	package=Package(args.type)
 
 	if args.show:
 		package.print_rules()
