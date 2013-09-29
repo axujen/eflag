@@ -202,7 +202,7 @@ class Package(object):
 		if self.rules == None:
 			self.read_rules()
 
-		for atom in self.rules:
+		for atom in sorted(self.rules):
 			print(self._atom_rule(atom))
 
 	def _atom_rule(self, atom):
