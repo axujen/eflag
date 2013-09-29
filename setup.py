@@ -10,12 +10,14 @@ setup(
     package_dir = {'': 'src'},
     packages = ['eflag'],
     scripts = ["eflag"],
-	description = eflag.description,
-    version = eflag.package_version,
     author = eflag.author,
-    author_email = eflag.author_email,
+    author_email = eflag.email,
+    version = eflag.version,
+	description = eflag.description,
+	license = 'GPLv3',
+	platforms='Linux',
     url = "https://github.com/axujen/eflag",
-    keywords = ["portage", "package"],
+    keywords = ["Portage", "Package", "Gentoo", "Funtoo", "Linux"],
 	classifiers = [
                 'Development Status :: 3 - Alpha',
                 'Environment :: Console',
@@ -32,9 +34,9 @@ setup(
     long_description = """\
 eflag
 -----
-is a script for managing rules in portage's package files.
+is a tool for managing rules in portage's package files.
 
-eflag is designed to be easy and simple to use, making rule management
-package file less cumbersome.
+eflag is designed to be easy and simple to use, making rule management of
+package files less cumbersome and error prone.
 """
 )

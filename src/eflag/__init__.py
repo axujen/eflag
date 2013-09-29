@@ -1,5 +1,6 @@
-from eflag.core import __version__
-package_version = __version__
-author = 'Axujen'
-author_email = 'axujen@gmail.com'
-description = "Python script to ease edition of portage package file."
+from eflag.core import __version__, __author__, __email__, __description__
+
+version=__version__
+author=__author__
+email=__email__
+description=__description__

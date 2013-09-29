@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #-*-coding:UTF-8-*-
-# © Copyright 2013 axujen, <axujen at gmail.com>. All Rights Reserved.
+# © Copyright 2013 axujen, <axujen at autistici.org>. All Rights Reserved.
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -20,7 +20,11 @@ from difflib import Differ
 
 from argparse import ArgumentParser, REMAINDER
 
-__version__ = '0.1.0'
+__author__		= 'axujen'
+__email__		= '<axujen at autistici.org>'
+__version__		= '0.5'
+__description__	= "manage rules inside portage's package files"
+
 supported_types=('accept_keywords', 'env', 'keywords', 'license', 'mask',
 'properties', 'unmask', 'use')
 
@@ -242,7 +246,7 @@ def main():
 	arguments.add_argument('-d', action='store_true', default=False, dest='delete',
 			help='delete the sepecified atom from the rules')
 	arguments.add_argument('-s', default=False, action='store_true', dest='show',
-			help="show the rules for this type")
+			help="show the rules listed in the package file")
 	arguments.add_argument('-c', default=False, action='store_true', dest='convert',
 			help="convert the current package file from file style to folder "\
 					"style and vice-versa")
