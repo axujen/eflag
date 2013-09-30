@@ -17,8 +17,10 @@
 import os, re, sys
 from codecs import open
 from difflib import Differ
-
 from argparse import ArgumentParser, REMAINDER
+
+from portage.dbapi import cpv_expand, porttree
+from portage.exception import AmbiguousPackageName
 
 __author__		= 'axujen'
 __email__		= '<axujen at autistici.org>'
@@ -29,7 +31,7 @@ supported_types=('accept_keywords', 'env', 'keywords', 'license', 'mask',
 'properties', 'unmask', 'use')
 
 class Package(object):
-	"""portage package file."""
+	"""Portage package file."""
 	def __init__(self, type):
 		self.type = type
 		self.path = '.'.join(('/etc/portage/package', self.type))
@@ -145,11 +147,19 @@ class Package(object):
 
 		self.save_rules()
 
-	def modify_atom(self, atom, flags):
+	def modify_atom(self, package, flags, force):
 		"""Add or modify an atom."""
 
 		if self.rules == None:
 			self.read_rules()
+
+		if force:
+			atom = package
+		else:
+			atom = get_atom(package)
+			if not atom:
+				print('No matches found for "%s"!' % package)
+				return
 
 		if not flags:
 			# mask and unmask do not require flags
@@ -184,11 +194,18 @@ class Package(object):
 
 		self.save_rules()
 
-	def delete_rule(self, atom):
+	def delete_rule(self, package, force):
 		"""Delete the rule associated with the `atom`"""
 
 		if self.rules == None:
 			self.read_rules()
+
+		if force:
+			atom = package
+		else:
+			atom = get_atom(package)
+			if not atom:
+				print('No matches found for "%s"!' % package)
 
 		if atom in self.rules:
 			self.rules.pop(atom)
@@ -222,31 +239,50 @@ def diff(string1, string2):
 			# Exception for atoms
 			sys.stdout.write(i[2:])
 		elif i.startswith("+"):
-			sys.stdout.write(' \033[32m'+i[2:]+'\033[0m')
+			sys.stdout.write(' \033[94m'+i[2:]+'\033[0m')
 		elif i.startswith("-"):
-			sys.stdout.write(' \033[31m'+i[2:]+'\033[0m')
+			sys.stdout.write(' \033[91m'+i[2:]+'\033[0m')
 		else:
 			sys.stdout.write(i[1:])
 	sys.stdout.write("\n")
+
+def get_atom(package):
+	"""Return the atom for a specified package name."""
+
+	try:
+		atom = cpv_expand.cpv_expand(package, mydb=porttree.portdbapi())
+	except AmbiguousPackageName as e:
+		print('Found several matches for "%s": %s' % (package, e))
+		return None
+	return atom if not atom.startswith('null/') else None
 
 def main():
 	arguments = ArgumentParser(description="Ease your /etc/portage/package.* "\
 			"file edition.")
 	arguments.add_argument('-v', '--version', action='version', version=__version__)
 	arguments.add_argument('atom', type=str, nargs='?', default=None,
-			help="atom to be added/modified")
+			help="atom or package name to be to work on")
 	arguments.add_argument('flags', type=str, nargs=REMAINDER, default=[],
-			help="flags to be enabled for the atom, flags starting with %% "\
-					"will be deleted")
-	arguments.add_argument('-t', type=str, default='use', dest='type',
-			help='package file type', choices=(supported_types))
-	arguments.add_argument('-d', action='store_true', default=False, dest='delete',
-			help='delete the sepecified atom from the rules')
-	arguments.add_argument('-s', default=False, action='store_true', dest='show',
-			help="show the rules listed in the package file")
-	arguments.add_argument('-c', default=False, action='store_true', dest='convert',
-			help="convert the current package file from file style to folder "\
-					"style and vice-versa")
+			help=\
+			"flags to be enabled for the atom, flags starting with %% "\
+			"will be deleted (make sure to single quote ** to prevent "\
+			"your shell from expanding it)")
+	arguments.add_argument('-t', '--type', type=str, default='use', dest='type',
+			choices=(supported_types), metavar='', help=\
+					"choose a package file type from {%s}. Default: use" %\
+					(', '.join(supported_types)))
+	arguments.add_argument('-d', '--delete', action='store_true', default=False,
+			dest='delete', help='delete the sepecified atom from the rules')
+	arguments.add_argument('-s', '--show', default=False, action='store_true',
+			dest='show', help="show the rules listed in the package file")
+	arguments.add_argument('-c', '--convert', default=False, action='store_true',
+			dest='convert', help=\
+					"convert the current package file from file "\
+					"style to folder style and vice-versa")
+	arguments.add_argument('-f', '--force', default=False, action='store_true',
+			dest='force', help=\
+					'force the script to pass the atom you specify '\
+					'even if its not matched in the portage database')
 
 	args = arguments.parse_args()
 	package=Package(args.type)
@@ -255,11 +291,10 @@ def main():
 		package.print_rules()
 	if args.convert:
 		package.convert()
-
 	if args.atom:
 		if args.delete:
-			package.delete_rule(args.atom)
+			package.delete_rule(args.atom, args.force)
 		else:
-			package.modify_atom(args.atom, args.flags)
+			package.modify_atom(args.atom, args.flags, args.force)
 
 # vim: ft=python:tabstop=4:softtabstop=4:shiftwidth=4:noexpandtab
