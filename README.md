@@ -40,6 +40,10 @@ Usage:
 	  -c, --convert  convert the current package file from file style to folder style and vice-versa
 	  -f, --force    force the script to pass the atom you specify even if its not matched in the portage
 					 database
+Ex:
+`eflag sys-apps/portage build doc` Will add sys-apps/portage build doc to package.use
+`eflag sys-apps/portage %doc epydoc` Will remove the doc flag and add the epydoc to sys-apps/portage	
+`eflag sys-apps/portage`Will remove the whole sys-apps/portage rule
 
 Thanks:
 =======
