@@ -5,9 +5,10 @@ is a tool for managing rules in portage's package files.
 eflag is designed to be easy and simple to use, making rule management of
 package files less cumbersome and error prone.
 
-Goals:
-======
+Features:
+=========
 * Adding, deleting, and modifying rules on the fly.
+* Does not require a category, only a package name.
 * Converting package files from directory to file structure and vice versa.
 * Simplicity and ease of use.
 
@@ -41,6 +42,7 @@ Usage:
 	  -f, --force    force the script to pass the atom you specify even if its not matched in the portage
 					 database
 Ex:
+
 `eflag sys-apps/portage build doc` Will add sys-apps/portage build doc to package.use
 `eflag sys-apps/portage %doc epydoc` Will remove the doc flag and add the epydoc to sys-apps/portage	
 `eflag sys-apps/portage`Will remove the whole sys-apps/portage rule
