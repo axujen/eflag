@@ -157,7 +157,6 @@ class Package(object):
 		else:
 			atom = get_atom(package)
 			if not atom:
-				print('No matches found for "%s"!' % package)
 				return
 
 		if not flags:
@@ -213,7 +212,7 @@ class Package(object):
 		else:
 			atom = get_atom(package)
 			if not atom:
-				print('No matches found for "%s"!' % package)
+				return
 
 		if atom in self.rules:
 			self.rules.pop(atom)
