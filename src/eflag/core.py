@@ -54,12 +54,11 @@ class Package(object):
 	def read_rules(self):
 		"""Read the rules from package file."""
 
-		pkg_file = self.path
 		rules = {}
 
 		# the rules are split into a list in the form [atom, flags]
 		if self.style == 'file':
-			with open(pkg_file, 'r', encoding='utf-8') as f:
+			with open(self.path, 'r', encoding='utf-8') as f:
 				# filter empty lines and comments
 				for line in f.readlines():
 					if not line.isspace() and not line.startswith("#"):
@@ -74,8 +73,8 @@ class Package(object):
 		# with each category file containing atoms for ebuilds that
 		# fall into that category
 		elif self.style == 'directory':
-			for category in os.listdir(pkg_file):
-				with open(os.path.join(pkg_file, category), 'r', encoding='utf-8') as f:
+			for category in os.listdir(self.path):
+				with open(os.path.join(self.path, category), 'r', encoding='utf-8') as f:
 					for line in f.readlines():
 						if not line.isspace() and not line.startswith("#"):
 							try:
@@ -178,15 +177,24 @@ class Package(object):
 			old_atom = self._atom_rule(atom)
 			for flag in flags:
 				if flag.startswith("%"):
-					matches = [f for f in self.rules[atom] if flag[1:] in (f, f[1:])]
+					matches = got_flag(flag[1:], self.rules[atom], ignore_minus=True)
 					if matches:
 						for match in matches:
 							self.rules[atom].remove(match)
+					else:
+						print('No match found for %s' % flag[1:])
+						return
 				elif flag in self.rules[atom]:
 					print('Warning flag "%s" already exists!' % flag)
+					return
 				else:
+					matches = got_flag(flag, self.rules[atom], ignore_minus=True)
+					if matches:
+						for match in matches:
+							self.rules[atom].remove(match)
 					self.rules[atom].append(flag)
-			print('Modified "%s":' % atom)
+
+			print('New rule: ', end='')
 			diff(old_atom, self._atom_rule(atom))
 		else:
 			self.rules[atom]=flags
@@ -255,6 +263,20 @@ def get_atom(package):
 		print('Found several matches for "%s": %s' % (package, e))
 		return None
 	return atom if not atom.startswith('null/') else None
+
+def got_flag(flag, flags, ignore_minus=False):
+	""" Return true if `flag` is in `flags`.
+
+	if `ignore_minus` is true, then the minus symbol will be ignored"""
+
+	if ignore_minus:
+		if flag.startswith('-'):
+			flag = flag[1:]
+
+		matches = [f for f in flags if flag in (f, f[1:])]
+		return matches if matches else False
+	else:
+		return [flag] if flag in flags else False
 
 def main():
 	arguments = ArgumentParser(description="Ease your /etc/portage/package.* "\
