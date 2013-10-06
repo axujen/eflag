@@ -24,7 +24,7 @@ from portage.exception import AmbiguousPackageName
 
 __author__		= 'axujen'
 __email__		= '<axujen at autistici.org>'
-__version__		= '0.6'
+__version__		= '0.6.2'
 __description__	= "manage rules inside portage's package files"
 
 supported_types=('accept_keywords', 'env', 'keywords', 'license', 'mask',
