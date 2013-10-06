@@ -74,7 +74,8 @@ class Package(object):
 		# fall into that category
 		elif self.style == 'directory':
 			for category in os.listdir(self.path):
-				with open(os.path.join(self.path, category), 'r', encoding='utf-8') as f:
+				with open(os.path.join(self.path, category), 'r',
+						encoding='utf-8') as f:
 					for line in f.readlines():
 						if not line.isspace() and not line.startswith("#"):
 							try:
@@ -97,7 +98,8 @@ class Package(object):
 		# Save according to the directory format if working with directories.
 		if self.style == 'directory':
 			# seperate categories and ebuilds, then build a dictionary in the
-			# {category:"category/ebuild\ncategory/ebuild2\n"} format for writing
+			# {category:"category/ebuild\ncategory/ebuild2\n"} format for
+			# writing
 			categories = {}
 			for rule in rules:
 				category, ebuild = rule.split('/', 1)
@@ -176,7 +178,8 @@ class Package(object):
 			old_atom = self._atom_rule(atom)
 			for flag in flags:
 				if flag.startswith("%"):
-					matches = got_flag(flag[1:], self.rules[atom], ignore_minus=True)
+					matches = got_flag(flag[1:], self.rules[atom],
+							ignore_minus=True)
 					if matches:
 						for match in matches:
 							self.rules[atom].remove(match)
@@ -187,7 +190,8 @@ class Package(object):
 					print('Warning flag "%s" already exists!' % flag)
 					return
 				else:
-					matches = got_flag(flag, self.rules[atom], ignore_minus=True)
+					matches = got_flag(flag, self.rules[atom],
+							ignore_minus=True)
 					if matches:
 						for match in matches:
 							self.rules[atom].remove(match)
@@ -280,7 +284,8 @@ def got_flag(flag, flags, ignore_minus=False):
 def main():
 	arguments = ArgumentParser(description="Ease your /etc/portage/package.* "\
 			"file edition.")
-	arguments.add_argument('-v', '--version', action='version', version=__version__)
+	arguments.add_argument('-v', '--version', action='version',
+			version=__version__)
 	arguments.add_argument('atom', type=str, nargs='?', default=None,
 			help="atom or package name to be to work on")
 	arguments.add_argument('flags', type=str, nargs=REMAINDER, default=[],
@@ -296,8 +301,8 @@ def main():
 			dest='delete', help='delete the sepecified atom from the rules')
 	arguments.add_argument('-s', '--show', default=False, action='store_true',
 			dest='show', help="show the rules listed in the package file")
-	arguments.add_argument('-c', '--convert', default=False, action='store_true',
-			dest='convert', help=\
+	arguments.add_argument('-c', '--convert', default=False,
+			action='store_true', dest='convert', help=\
 					"convert the current package file from file "\
 					"style to folder style and vice-versa")
 	arguments.add_argument('-f', '--force', default=False, action='store_true',
