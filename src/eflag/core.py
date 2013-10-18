@@ -38,7 +38,13 @@ class Package(object):
 
 		# for the sake of simplicity create the file if it does not exist
 		if not os.path.exists(self.path):
-			open(self.path, 'a', encoding='utf-8').close()
+			answer = input("%s does not exit! Would you like to create it? "\
+					% self.path).lower()
+			if answer in ("y", "yes"):
+				open(self.path, 'a', encoding='utf-8').close()
+			else:
+				print("Nothing can be done, exiting now.")
+				sys.exit(1)
 
 		# Detect package style
 		if os.path.isdir(self.path):
@@ -230,8 +236,11 @@ class Package(object):
 		if self.rules == None:
 			self.read_rules()
 
-		for atom in sorted(self.rules):
-			print(self._atom_rule(atom))
+		if self.rules: # Check if there are in rules in this file
+			for atom in sorted(self.rules):
+				print(self._atom_rule(atom))
+		else: # print a special message
+			print("%s is empty!" % self.path)
 
 	def _atom_rule(self, atom):
 		"""Join the rule for the specified atom into one line."""
